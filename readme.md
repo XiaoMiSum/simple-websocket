@@ -3,7 +3,7 @@
 [![License](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/XiaoMiSum/simple-websocket/blob/master/LICENSE)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.xiaomisum/simple-websocket)](https://central.sonatype.com/artifact/io.github.xiaomisum/simple-websocket)
 [![MiGoo Author](https://img.shields.io/badge/Author-xiaomi-yellow.svg)](https://github.com/XiaoMiSum)
-[![GitHub release](https://img.shields.io/github/release/XiaoMiSum/simplehttp.svg)](https://github.com/XiaoMiSum/simple-websocket/releases)
+[![GitHub release](https://img.shields.io/github/release/XiaoMiSum/simple-websocket.svg)](https://github.com/XiaoMiSum/simple-websocket/releases)
 
 ## 1. 介绍
 
