@@ -21,7 +21,7 @@
     <scm>
         <connection>scm:git:git@github.com:XiaoMiSum/simple-websocket.git</connection>
         <developerConnection>scm:git:git@github.com:XiaoMiSum/simple-websocket.git</developerConnection>
-        <url>https://xiaomisum.github.io/simplehttp/</url>
+        <url>https://xiaomisum.github.io/simple-websocket/</url>
     </scm>
 
     <developers>
