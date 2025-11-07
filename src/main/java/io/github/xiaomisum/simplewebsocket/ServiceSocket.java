@@ -108,6 +108,7 @@ public class ServiceSocket {
      */
     @OnWebSocketFrame
     public void onFrame(Frame frame) {
+        response.endTime = System.currentTimeMillis();
         var payload = frame.getPayload();
         byte[] bytes;
         if (payload.hasArray()) {
@@ -118,7 +119,6 @@ public class ServiceSocket {
             payload.duplicate().get(bytes);
         }
         response.bytes = bytes;
-        response.endTime = System.currentTimeMillis();
     }
 
 
@@ -142,15 +142,11 @@ public class ServiceSocket {
      */
     @OnWebSocketClose
     public void onClose(int statusCode, String reason) {
-        if (statusCode != 1000) {
-            response.status = statusCode;
-        }
-
-        //Notify connection opening and closing latches of the closed connection
+        response.status = statusCode;
         openLatch.countDown();
         closeLatch.countDown();
         connected = false;
-        //Stoping WebSocket
+        //关闭 WebSocket connection
         try {
             client.stop();
         } catch (Exception ignored) {
@@ -228,7 +224,7 @@ public class ServiceSocket {
      * @param statusText 状态文本
      */
     public void close(int statusCode, String statusText) {
-        //Closing WebSocket session
+        //关闭 WebSocket session
         if (session != null) {
             session.close(statusCode, statusText);
         }
