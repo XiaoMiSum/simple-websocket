@@ -8,6 +8,7 @@
     <artifactId>simple-websocket</artifactId>
     <version>1.0.0</version>
 
+    <name>${project.artifactId}</name>
     <description>a simple web socket client</description>
     <url>https://xiaomisum.github.io/simple-websocket/</url>
 
