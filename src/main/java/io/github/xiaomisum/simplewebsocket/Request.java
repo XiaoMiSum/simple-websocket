@@ -29,11 +29,8 @@
 package io.github.xiaomisum.simplewebsocket;
 
 
-import org.eclipse.jetty.websocket.api.WebSocketPolicy;
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest;
-import org.eclipse.jetty.websocket.client.HttpClientProvider;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
-import org.eclipse.jetty.websocket.common.scopes.SimpleContainerScope;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -43,7 +40,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 /**
- * WebSocket请求类，用于构建和执行WebSocket请求
+ * WebSocket请求类,用于构建和执行WebSocket请求
  *
  * @author xiaomi
  * Created at 2025/10/26 21:25
@@ -143,7 +140,7 @@ public class Request {
     /**
      * 设置请求超时时间
      *
-     * @param timeout 超时时间（秒）
+     * @param timeout 超时时间(秒)
      * @return 当前请求实例
      */
     public Request timeout(int timeout) {
@@ -182,15 +179,22 @@ public class Request {
      */
     public Response execute(Function<String, Boolean> closeConnectHandler, Function<byte[], String> byteToStringConverter) throws Exception {
         var response = new Response(System.currentTimeMillis());
-        var client = new WebSocketClient(HttpClientProvider.get(new SimpleContainerScope(WebSocketPolicy.newClientPolicy())));
-        var socket = new ServiceSocket(client, response, closeConnectHandler, byteToStringConverter == null ? String::new : byteToStringConverter);
-        var request = new ClientUpgradeRequest();
-        if (headers != null && !headers.isEmpty()) {
-            headers.forEach(request::setHeader);
-        }
+        
+        // Jetty 12 原生 API
+        var client = new WebSocketClient();
+        var socket = new ServiceSocket(response, closeConnectHandler, byteToStringConverter == null ? String::new : byteToStringConverter);
+        
+        // 构建带查询参数的URL
         url = url + getQueryString();
+        
+        // 创建升级请求
+        var request = new ClientUpgradeRequest(new URI(url));
+        if (headers != null && !headers.isEmpty()) {
+            headers.forEach((key, value) -> request.getHeaders().put(key, java.util.List.of(value)));
+        }
+        
         client.start();
-        client.connect(socket, new URI(url), request);
+        client.connect(socket, request);
         socket.awaitOpen(timeout, TimeUnit.SECONDS);
 
         if (bytes != null && bytes.length > 0) {
@@ -199,6 +203,7 @@ public class Request {
             socket.sendMessage(body);
         }
         socket.awaitClose(timeout, TimeUnit.SECONDS);
+        
         return response;
     }
 
@@ -264,7 +269,7 @@ public class Request {
     /**
      * 获取超时时间
      *
-     * @return 超时时间（秒）
+     * @return 超时时间(秒)
      */
     public int timeout() {
         return timeout;

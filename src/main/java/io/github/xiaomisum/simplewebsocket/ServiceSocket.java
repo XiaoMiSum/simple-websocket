@@ -28,11 +28,10 @@
 
 package io.github.xiaomisum.simplewebsocket;
 
+import org.eclipse.jetty.websocket.api.Callback;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.StatusCode;
 import org.eclipse.jetty.websocket.api.annotations.*;
-import org.eclipse.jetty.websocket.api.extensions.Frame;
-import org.eclipse.jetty.websocket.client.WebSocketClient;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -42,7 +41,7 @@ import java.util.function.Function;
 
 
 /**
- * WebSocket服务套接字类，处理WebSocket连接的各个方面
+ * WebSocket服务套接字类,处理WebSocket连接的各个方面
  *
  * @author xiaomi
  * Created at 2025/10/26 21:25
@@ -53,7 +52,6 @@ public class ServiceSocket {
     private final Response response;
     private final Function<String, Boolean> closeConnectHandler;
     private final Function<byte[], String> byteToStringConverter;
-    protected WebSocketClient client;
     protected CountDownLatch openLatch = new CountDownLatch(1);
     protected CountDownLatch closeLatch = new CountDownLatch(1);
     protected Session session;
@@ -62,13 +60,11 @@ public class ServiceSocket {
     /**
      * 构造一个新的服务套接字实例
      *
-     * @param client                WebSocket客户端
      * @param response              响应对象
      * @param closeConnectHandler   关闭连接处理函数
      * @param byteToStringConverter 字节数组到字符串的转换函数
      */
-    public ServiceSocket(WebSocketClient client, Response response, Function<String, Boolean> closeConnectHandler, Function<byte[], String> byteToStringConverter) {
-        this.client = client;
+    public ServiceSocket(Response response, Function<String, Boolean> closeConnectHandler, Function<byte[], String> byteToStringConverter) {
         this.response = response;
         this.closeConnectHandler = closeConnectHandler;
         this.byteToStringConverter = byteToStringConverter;
@@ -81,6 +77,8 @@ public class ServiceSocket {
      */
     @OnWebSocketMessage
     public void onMessage(String message) {
+        // 保存响应数据
+        response.bytes = message.getBytes();
         if (closeConnectHandler == null || closeConnectHandler.apply(message)) {
             closeLatch.countDown();
         }
@@ -89,45 +87,28 @@ public class ServiceSocket {
     /**
      * 处理二进制消息
      *
-     * @param message 接收到的二进制消息
-     * @param offset  数据偏移量
-     * @param length  数据长度
+     * @param buffer   接收到的二进制消息缓冲区
+     * @param callback 发送完成回调
      */
     @OnWebSocketMessage
-    public void onMessage(byte[] message, int offset, int length) {
+    public void onMessage(ByteBuffer buffer, Callback callback) {
         // 使用函数式方法将byte[]转换为String
-        if (closeConnectHandler == null || closeConnectHandler.apply(byteToStringConverter.apply(message))) {
+        byte[] data = new byte[buffer.remaining()];
+        buffer.get(data);
+        // 保存响应数据
+        response.bytes = data;
+        if (closeConnectHandler == null || closeConnectHandler.apply(byteToStringConverter.apply(data))) {
             closeLatch.countDown();
         }
+        callback.succeed();
     }
-
-    /**
-     * 处理WebSocket帧
-     *
-     * @param frame WebSocket帧
-     */
-    @OnWebSocketFrame
-    public void onFrame(Frame frame) {
-        response.endTime = System.currentTimeMillis();
-        var payload = frame.getPayload();
-        byte[] bytes;
-        if (payload.hasArray()) {
-            bytes = payload.array();
-        } else {
-            // 对于没有数组支持的ByteBuffer（如直接缓冲区），我们需要复制数据
-            bytes = new byte[payload.remaining()];
-            payload.duplicate().get(bytes);
-        }
-        response.bytes = bytes;
-    }
-
 
     /**
      * 处理WebSocket连接打开事件
      *
      * @param session WebSocket会话
      */
-    @OnWebSocketConnect
+    @OnWebSocketOpen
     public void onOpen(Session session) {
         this.session = session;
         connected = true;
@@ -137,8 +118,8 @@ public class ServiceSocket {
     /**
      * 处理WebSocket连接关闭事件
      *
-     * @param statusCode 状态码
-     * @param reason     关闭原因
+     * @param statusCode WebSocket会话
+     * @param reason 关闭原因
      */
     @OnWebSocketClose
     public void onClose(int statusCode, String reason) {
@@ -146,12 +127,18 @@ public class ServiceSocket {
         openLatch.countDown();
         closeLatch.countDown();
         connected = false;
-        //关闭 WebSocket connection
-        try {
-            client.stop();
-        } catch (Exception ignored) {
+    }
 
-        }
+    /**
+     * 处理WebSocket错误事件
+     *
+     * @param throwable 异常
+     */
+    @OnWebSocketError
+    public void onError(Throwable throwable) {
+        connected = false;
+        openLatch.countDown();
+        closeLatch.countDown();
     }
 
 
@@ -160,7 +147,7 @@ public class ServiceSocket {
      *
      * @param duration 等待时长
      * @param unit     时间单位
-     * @return 如果在指定时间内连接关闭则返回true，否则返回false
+     * @return 如果在指定时间内连接关闭则返回true,否则返回false
      * @throws InterruptedException 如果等待过程中线程被中断
      */
     public boolean awaitClose(int duration, TimeUnit unit) throws InterruptedException {
@@ -174,7 +161,7 @@ public class ServiceSocket {
      *
      * @param duration 等待时长
      * @param unit     时间单位
-     * @return 如果在指定时间内连接打开则返回true，否则返回false
+     * @return 如果在指定时间内连接打开则返回true,否则返回false
      * @throws InterruptedException 如果等待过程中线程被中断
      */
     public boolean awaitOpen(int duration, TimeUnit unit) throws InterruptedException {
@@ -197,7 +184,7 @@ public class ServiceSocket {
      * @throws IOException 如果发送过程中发生IO异常
      */
     public void sendMessage(byte[] message) throws IOException {
-        session.getRemote().sendBytes(ByteBuffer.wrap(message));
+        session.sendBinary(ByteBuffer.wrap(message), Callback.NOOP);
     }
 
     /**
@@ -207,7 +194,7 @@ public class ServiceSocket {
      * @throws IOException 如果发送过程中发生IO异常
      */
     public void sendMessage(String message) throws IOException {
-        session.getRemote().sendString(message);
+        session.sendText(message, Callback.NOOP);
     }
 
     /**
@@ -226,14 +213,14 @@ public class ServiceSocket {
     public void close(int statusCode, String statusText) {
         //关闭 WebSocket session
         if (session != null) {
-            session.close(statusCode, statusText);
+            session.close(statusCode, statusText, Callback.NOOP);
         }
     }
 
     /**
      * 检查WebSocket是否已连接
      *
-     * @return 如果已连接返回true，否则返回false
+     * @return 如果已连接返回true,否则返回false
      */
     public boolean isConnected() {
         return connected;

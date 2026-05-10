@@ -6,7 +6,7 @@
 
     <groupId>io.github.xiaomisum</groupId>
     <artifactId>simple-websocket</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 
     <name>${project.artifactId}</name>
     <description>a simple web socket client</description>
@@ -35,9 +35,10 @@
     </developers>
     <properties>
         <!-- 单元测试框架 -->
-        <testng.version>7.9.0</testng.version>
+        <testng.version>7.12.0</testng.version>
 
-        <websocket.version>9.4.58.v20250814</websocket.version>
+        <!-- 统一使用 Jetty 12 最新稳定版 -->
+        <jetty.version>12.1.9</jetty.version>
 
         <compiler.version>3.13.0</compiler.version>
         <publishing.version>0.8.0</publishing.version>
@@ -51,17 +52,32 @@
     </properties>
 
     <dependencies>
-        <!-- https://mvnrepository.com/artifact/org.eclipse.jetty.websocket/websocket-client -->
+        <!-- https://mvnrepository.com/artifact/org.eclipse.jetty.websocket/jetty-websocket-jetty-client -->
         <dependency>
             <groupId>org.eclipse.jetty.websocket</groupId>
-            <artifactId>websocket-client</artifactId>
-            <version>${websocket.version}</version>
+            <artifactId>jetty-websocket-jetty-client</artifactId>
+            <version>${jetty.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.eclipse.jetty.websocket</groupId>
-            <artifactId>websocket-server</artifactId>
-            <version>${websocket.version}</version>
+            <artifactId>jetty-websocket-jetty-server</artifactId>
+            <version>${jetty.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Jetty 12 EE10 Servlet API (测试用) -->
+        <dependency>
+            <groupId>org.eclipse.jetty.ee10</groupId>
+            <artifactId>jetty-ee10-servlet</artifactId>
+            <version>${jetty.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.jetty.ee10.websocket</groupId>
+            <artifactId>jetty-ee10-websocket-jetty-server</artifactId>
+            <version>${jetty.version}</version>
             <scope>test</scope>
         </dependency>
 

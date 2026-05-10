@@ -39,8 +39,10 @@ import java.util.regex.Pattern;
 public class RequestTest {
 
     @BeforeClass
-    public void beforeClass() {
+    public void beforeClass() throws InterruptedException {
         Executors.newSingleThreadExecutor().submit(WebSocketServerTest::test);
+        // 等待服务器启动完成
+        Thread.sleep(2000);
     }
 
     @Test
