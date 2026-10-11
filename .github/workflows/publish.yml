@@ -41,9 +41,18 @@ jobs:
         run: |
           mvn versions:set -DnewVersion=${{ github.event.inputs.version }} -DgenerateBackupPoms=false
           git add pom.xml
-          git commit -m "Bump version to ${{ github.event.inputs.version }}"
-          git tag -a "v${{ github.event.inputs.version }}" -m "Release version ${{ github.event.inputs.version }}"
-          git push origin "v${{ github.event.inputs.version }}"
+          if git diff --cached --quiet; then
+            echo "pom.xml already at version ${{ github.event.inputs.version }}, skipping commit"
+          else
+            git commit -m "Bump version to ${{ github.event.inputs.version }}"
+            git push origin HEAD:master
+          fi
+          if git ls-remote --tags origin "refs/tags/v${{ github.event.inputs.version }}" | grep -q .; then
+            echo "Tag v${{ github.event.inputs.version }} already exists, skipping tag"
+          else
+            git tag -a "v${{ github.event.inputs.version }}" -m "Release version ${{ github.event.inputs.version }}"
+            git push origin "v${{ github.event.inputs.version }}"
+          fi
       
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v6
