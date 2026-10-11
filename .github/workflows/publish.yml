@@ -4,6 +4,11 @@ on:
   release:
     types: [created]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (leave empty to use pom.xml version)'
+        required: false
+        default: ''
 
 # 流水线对仓库只读：不 commit、不 push、不打 tag，版本一律以 pom.xml 为准
 permissions:
@@ -30,10 +35,19 @@ jobs:
         with:
           maven-version: '3.9.6'
 
-      - name: Read version from pom.xml
+      - name: Resolve version
         id: version
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
-          VERSION=$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)
+          if [ -n "$INPUT_VERSION" ]; then
+            # 使用手动输入的版本（仅修改流水线工作区，不回写仓库）
+            mvn -q versions:set -DnewVersion="$INPUT_VERSION" -DgenerateBackupPoms=false
+            VERSION="$INPUT_VERSION"
+          else
+            # 未填写时以 pom.xml 中的版本为准
+            VERSION=$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)
+          fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Publishing io.github.xiaomisum:simple-websocket:${VERSION}"
 
