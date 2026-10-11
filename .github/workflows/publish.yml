@@ -51,6 +51,23 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Publishing io.github.xiaomisum:simple-websocket:${VERSION}"
 
+      - name: Validate GPG key secret
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          if [ -z "${GPG_PRIVATE_KEY}" ]; then
+            echo "::error::Secret GPG_PRIVATE_KEY is empty or not set"
+            exit 1
+          fi
+          if printf '%s' "${GPG_PRIVATE_KEY}" | grep -q -- "BEGIN PGP PRIVATE KEY BLOCK"; then
+            echo "GPG_PRIVATE_KEY armored format OK"
+          elif printf '%s' "${GPG_PRIVATE_KEY}" | base64 -d 2>/dev/null | grep -q -- "BEGIN PGP PRIVATE KEY BLOCK"; then
+            echo "GPG_PRIVATE_KEY base64 format OK"
+          else
+            echo "::error::Secret GPG_PRIVATE_KEY does not contain a complete private key (missing 'BEGIN PGP PRIVATE KEY BLOCK'). Re-export with: gpg --export-secret-keys --armor <FINGERPRINT> and update the secret."
+            exit 1
+          fi
+
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v6
         with:
